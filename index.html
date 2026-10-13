@@ -1,0 +1,1611 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Ôn Tập Hóa Phân Tích</title>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Lexend', sans-serif; }
+        body { background-color: #0f172a; color: #1e293b; min-height: 100vh; display: flex; flex-direction: column; }
+        
+        .mode-switcher {
+            background: #1e293b; color: #ffffff; padding: 12px 20px; display: flex;
+            justify-content: space-between; align-items: center; border-bottom: 2px solid #334155;
+            position: sticky; top: 0; z-index: 1000; flex-wrap: wrap; gap: 10px;
+        }
+        .mode-btn-group { display: flex; gap: 8px; align-items: center; }
+        .btn-mode {
+            padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600;
+            cursor: pointer; border: none; background: #334155; color: #94a3b8; transition: all 0.2s;
+        }
+        .btn-mode.active { background: #0d9488; color: #ffffff; }
+        .btn-admin-auth {
+            background: #d97706; color: white; padding: 8px 14px; border-radius: 8px;
+            font-size: 12px; font-weight: 600; border: none; cursor: pointer; margin-left: 10px;
+        }
+
+        .main-wrapper { flex: 1; display: flex; justify-content: center; padding: 20px; }
+
+        /* STUDENT VIEW */
+        .student-app-container {
+            width: 100%; max-width: 460px; background: #ffffff; height: 850px; max-height: 90vh;
+            display: flex; flex-direction: column; position: relative; border-radius: 24px; overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3); border: 4px solid #334155;
+        }
+        .welcome-screen { padding: 28px 20px; display: flex; flex-direction: column; justify-content: center; height: 100%; background: linear-gradient(180deg, #ccfbf1 0%, #ffffff 100%); }
+        .welcome-title { font-size: 22px; font-weight: 700; color: #0f766e; text-align: center; margin-bottom: 6px; }
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-size: 11px; font-weight: 700; color: #334155; margin-bottom: 4px; text-transform: uppercase; }
+        .form-control { width: 100%; padding: 10px 12px; border: 2px solid #cbd5e1; border-radius: 10px; font-size: 13px; outline: none; }
+        
+        .quiz-screen { display: none; flex-direction: column; height: 100%; flex: 1; overflow: hidden; }
+        .student-header { padding: 12px 16px; background: #ffffff; border-bottom: 2px solid #edf2f7; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
+        .user-info-bar { display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 600; color: #0f766e; background: #f0fdf4; padding: 6px 12px; border-radius: 8px; border: 1px solid #bbf7d0; }
+        .user-actions { display: flex; gap: 6px; }
+        .btn-change-pass-student { background: #0284c7; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-size: 10px; cursor: pointer; font-weight: bold; }
+        .btn-logout-student { background: #dc2626; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-size: 10px; cursor: pointer; font-weight: bold; }
+        
+        .progress-row { display: flex; align-items: center; justify-content: space-between; }
+        .progress-bar-bg { flex: 1; height: 10px; background: #e2e8f0; border-radius: 20px; margin: 0 12px; overflow: hidden; }
+        .progress-bar-fill { width: 0%; height: 100%; background: #0d9488; transition: width 0.3s; }
+
+        /* DANH SÁCH CHƯƠNG CUỘN NGANG DƯỚI HEADER SINH VIÊN */
+        .chapter-nav-wrapper {
+            background: #f1f5f9; border-bottom: 2px solid #e2e8f0; padding: 10px 12px; flex-shrink: 0;
+        }
+        .chapter-nav-title { font-size: 11px; font-weight: 700; color: #0f766e; margin-bottom: 6px; display: flex; align-items: center; gap: 4px; }
+        .chapter-tab-bar {
+            display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin;
+        }
+        .chapter-tab-bar::-webkit-scrollbar { height: 4px; }
+        .chapter-tab-bar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .chapter-tab-btn {
+            white-space: nowrap; font-size: 11px; font-weight: 600; padding: 6px 14px; border-radius: 20px;
+            background: #ffffff; color: #475569; border: 1.5px solid #cbd5e1; cursor: pointer; transition: all 0.2s; flex-shrink: 0;
+        }
+        .chapter-tab-btn:hover { background: #e2e8f0; }
+        .chapter-tab-btn.active { background: #0d9488; color: #ffffff; border-color: #0d9488; font-weight: 700; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        
+        .student-content { flex: 1; padding: 16px; overflow-y: auto; padding-bottom: 90px; }
+        .tag-group { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+        .tag { font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 12px; }
+        .tag-topic { background: #ccfbf1; color: #0f766e; }
+        .tag-diff { background: #fef3c7; color: #b45309; }
+        .question-card { background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 16px; margin-bottom: 16px; font-size: 14px; line-height: 1.5; font-weight: 500; white-space: pre-line; }
+        
+        .options-list { display: flex; flex-direction: column; gap: 10px; }
+        .option-item { padding: 12px 14px; border: 2px solid #e2e8f0; border-radius: 12px; background: #fff; cursor: pointer; font-size: 13px; font-weight: 500; }
+        .option-item.selected { border-color: #0d9488; background: #ccfbf1; color: #0f766e; font-weight: 600; }
+        .textarea-input { width: 100%; padding: 12px; border: 2px solid #cbd5e1; border-radius: 12px; font-size: 13px; outline: none; }
+
+        .student-bottom { position: absolute; bottom: 0; left: 0; right: 0; padding: 16px; background: #ffffff; border-top: 1px solid #e2e8f0; }
+        .btn-check { width: 100%; padding: 14px; border: none; border-radius: 12px; background: #0d9488; color: #ffffff; font-size: 15px; font-weight: 700; cursor: pointer; transition: 0.2s; }
+        .btn-check:disabled { background: #cbd5e1; cursor: not-allowed; }
+        .btn-check:active { opacity: 0.8; }
+
+        .sheet-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.4); display: none; justify-content: flex-end; flex-direction: column; z-index: 100; }
+        .sheet-overlay.active { display: flex; }
+        .feedback-sheet { background: #ffffff; border-radius: 20px 20px 0 0; padding: 20px; max-height: 85%; overflow-y: auto; }
+        .status-header { font-size: 16px; font-weight: 700; margin-bottom: 10px; }
+        .section-box { padding: 10px 12px; border-radius: 10px; margin-bottom: 8px; font-size: 12px; line-height: 1.5; }
+        .box-solution { background: #f0fdf4; border-left: 4px solid #22c55e; color: #166534; }
+        .box-wrong { background: #fef2f2; border-left: 4px solid #ef4444; color: #991b1b; }
+        .btn-appeal { background: #f59e0b; color: white; border: none; padding: 10px; border-radius: 10px; font-size: 12px; font-weight: 600; width: 100%; cursor: pointer; margin-top: 6px; }
+
+        /* ADMIN VIEW */
+        .admin-wrapper { width: 100%; max-width: 1100px; background: #ffffff; border-radius: 16px; padding: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); display: none; }
+        .admin-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 16px; margin-bottom: 20px; }
+        .admin-tabs { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid #cbd5e1; padding-bottom: 10px; flex-wrap: wrap; }
+        .tab-item { padding: 8px 16px; font-size: 13px; font-weight: 600; color: #64748b; cursor: pointer; border-radius: 8px; background: #f1f5f9; transition: all 0.2s; }
+        .tab-item.active { background: #0d9488; color: #ffffff; }
+
+        .import-box { background: #f0fdf4; border: 2px dashed #22c55e; border-radius: 12px; padding: 16px; margin-bottom: 20px; display: none; }
+        .import-box.active { display: block; }
+        .admin-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .admin-table th, .admin-table td { text-align: left; padding: 12px; border-bottom: 1px solid #e2e8f0; font-size: 13px; }
+        .admin-table th { background: #f8fafc; color: #475569; font-weight: 600; }
+
+        .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; margin-right: 4px; }
+        .btn-view { background: #0284c7; color: white; }
+        .btn-approve { background: #22c55e; color: white; }
+        .btn-delete { background: #fee2e2; color: #dc2626; }
+
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 2000; }
+        .modal-overlay.active { display: flex; }
+        .modal-card { background: #ffffff; width: 92%; max-width: 680px; border-radius: 16px; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; }
+        .modal-header { font-size: 18px; font-weight: 700; color: #0f766e; margin-bottom: 16px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; display: flex; justify-content: space-between; }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 14px; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+        /* GAMIFICATION STYLES */
+        .level-badge {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: bold; margin-left: 6px;
+        }
+        .btn-leaderboard {
+            background: #8b5cf6; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-size: 10px; cursor: pointer; font-weight: bold;
+        }
+        .leaderboard-row {
+            display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #e2e8f0;
+        }
+        .leaderboard-row:nth-child(1) { background: #fef3c7; font-weight: bold; } /* Top 1 */
+        .leaderboard-row:nth-child(2) { background: #f1f5f9; font-weight: bold; } /* Top 2 */
+        .leaderboard-row:nth-child(3) { background: #ffedd5; font-weight: bold; } /* Top 3 */
+        .streak-icon { color: #ef4444; font-size: 14px; margin-left: 5px; }
+    </style>
+</head>
+<body>
+
+<div class="mode-switcher">
+    <div style="font-weight: 700; font-size: 14px; color: #2dd4bf;">🧪 HÓA PHÂN TÍCH - ÔN TẬP TRỰC TUYẾN</div>
+    <div class="mode-btn-group">
+        <div id="adminControls" style="display: none;">
+            <button class="btn-mode active" id="btnModeStudent" onclick="switchMode('student')">📱 Giao diện Sinh viên</button>
+            <button class="btn-mode" id="btnModeAdmin" onclick="switchMode('admin')">👨‍🏫 Bảng điều khiển giảng viên (<span id="pendingBadge">0</span>)</button>
+        </div>
+        <button class="btn-admin-auth" id="btnAdminAuth" onclick="handleAdminAuth()">🔒 Đăng nhập Admin</button>
+    </div>
+</div>
+
+<div class="main-wrapper">
+
+    <!-- GIAO DIỆN SINH VIÊN -->
+    <div class="student-app-container" id="studentView">
+        <div class="welcome-screen" id="welcomeScreen">
+            <div class="welcome-title">🧪 HÓA PHÂN TÍCH</div>
+            <p style="text-align: center; font-size: 13px; color: #475569; margin-bottom: 20px;">Trang Ôn Tập Tương Tác</p>
+            <form onsubmit="startQuiz(event)">
+                <div class="form-group">
+                    <label>MÃ SINH VIÊN (*)</label>
+                    <input type="text" id="txtStudentId" class="form-control" placeholder="Ví dụ: SV190012" required>
+                </div>
+                <div class="form-group">
+                    <label>HỌ VÀ TÊN (*)</label>
+                    <input type="text" id="txtFullName" class="form-control" placeholder="Ví dụ: Nguyễn Văn Nam" required>
+                </div>
+                <div class="form-group">
+                    <label>MẬT KHẨU (*)</label>
+                    <input type="password" id="txtStudentPassword" class="form-control" placeholder="Tự đặt mật khẩu khi đăng ký đầu tiên" required>
+                </div>
+                <button type="submit" class="btn-check">ĐĂNG NHẬP / VÀO BÀI ➔</button>
+            </form>
+        </div>
+
+        <div class="quiz-screen" id="quizScreen">
+            <div class="student-header">
+                <div class="user-info-bar">
+                    <span>👤 <span id="lblStudentInfo">...</span></span>
+                    <div class="user-actions">
+                        <button class="btn-leaderboard" onclick="showLeaderboard()">🏆 BXH</button>
+                        <button class="btn-change-pass-student" onclick="openStudentChangePassModal()">🔑 Đổi mật khẩu</button>
+                        <button class="btn-logout-student" onclick="handleStudentLogout()">🚪 Đăng xuất</button>
+                    </div>
+                </div>
+                <div class="progress-row">
+                    <span style="font-size: 11px; font-weight: bold; color: #64748b; cursor: pointer;" onclick="handleStudentLogout()">✕ Đổi SV</span>
+                    <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressBar"></div></div>
+                    <div style="font-size: 12px; font-weight: bold; color: #1e293b;">💎 <span id="xpCount">0</span> XP</div>
+                </div>
+            </div>
+
+            <!-- DANH SÁCH CÁC CHƯƠNG ĐẶT NGAY DƯỚI TAB HEADER SINH VIÊN -->
+            <div class="chapter-nav-wrapper">
+                <div class="chapter-nav-title">📚 CHỌN CHƯƠNG ÔN TẬP:</div>
+                <div class="chapter-tab-bar" id="studentChapterTabBar"></div>
+            </div>
+
+            <div class="student-content">
+                <div class="tag-group">
+                    <span class="tag tag-topic" id="lblChapter">Chương 1</span>
+                    <span class="tag tag-diff" id="lblDifficulty">Trung bình</span>
+                </div>
+                <div class="question-card" id="lblQuestionText">Đang tải câu hỏi...</div>
+                <div id="answerArea"></div>
+            </div>
+
+            <div class="student-bottom">
+                <button class="btn-check" id="btnCheck" disabled onclick="checkAnswer()">KIỂM TRA ĐÁP ÁN</button>
+            </div>
+
+            <div class="sheet-overlay" id="sheetOverlay">
+                <div class="feedback-sheet">
+                    <div class="status-header" id="sheetStatus"></div>
+                    <div id="sheetContent"></div>
+                    <div id="appealContainer"></div>
+                    
+                    <!-- VÙNG HIỂN THỊ NÚT ĐIỀU HƯỚNG ĐỘNG -->
+                    <div id="actionButtons" style="margin-top: 10px;"></div>
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- GIAO DIỆN GIẢNG VIÊN -->
+    <div class="admin-wrapper" id="adminView">
+        <div class="admin-header">
+            <div>
+                <h2 style="font-size: 18px; color: #0f766e;">👨‍🏫 BẢNG ĐIỀU KHIỂN GIẢNG VIÊN</h2>
+                <p style="font-size: 12px; color: #64748b;">Quản lý Chương trình học, Ngân hàng câu hỏi & Sinh viên</p>
+            </div>
+            <button class="btn-sm btn-view" style="background:#0f766e; padding: 8px 14px;" onclick="openAdminChangePassModal()">🔑 Đổi Mật Khẩu Admin</button>
+        </div>
+
+        <div class="admin-tabs">
+            <div class="tab-item active" id="tabBtn0" onclick="switchAdminTab(0)">📖 Chương Trình Môn Học (<span id="totalCurriculumBadge">0</span>)</div>
+            <div class="tab-item" id="tabBtn1" onclick="switchAdminTab(1)">📚 Ngân Hàng Câu Hỏi (<span id="totalQBadge">0</span>)</div>
+            <div class="tab-item" id="tabBtn2" onclick="switchAdminTab(2)">👨‍🎓 Quản Lý Sinh Viên (<span id="tab2StudentCount">0</span>)</div>
+            <div class="tab-item" id="tabBtn3" onclick="switchAdminTab(3)">📩 Phản Hồi & Chấm Bài (<span id="tab3PendingCount">0</span>)</div>
+        </div>
+
+        <!-- TAB 0: QUẢN LÝ CHƯƠNG TRÌNH MÔN HỌC -->
+        <div id="adminTab0">
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+                <h3 style="font-size: 14px; color: #0f766e; margin-bottom: 12px;">➕ THÊM CHƯƠNG MỚI VÀO CHƯƠNG TRÌNH HỌC</h3>
+                <form onsubmit="saveNewChapter(event)">
+                    <div class="grid-3">
+                        <div class="form-group">
+                            <label>MÃ CHƯƠNG (*)</label>
+                            <input type="text" id="txtNewChapterCode" class="form-control" placeholder="Ví dụ: C1, C2, C3..." required>
+                        </div>
+                        <div class="form-group" style="grid-column: span 2;">
+                            <label>TÊN CHƯƠNG CHI TIẾT (*)</label>
+                            <input type="text" id="txtNewChapterName" class="form-control" placeholder="Ví dụ: Đại cương về Hóa phân tích và Sai số" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-sm btn-approve" style="padding: 8px 16px;">💾 Thêm Chương Mới</button>
+                </form>
+            </div>
+
+            <h4 style="font-size: 14px; color: #334155; margin-bottom: 10px;">📋 Danh sách các chương hiện tại:</h4>
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th style="width: 100px;">Mã Chương</th>
+                        <th>Tên Chi Tiết Chương</th>
+                        <th style="width: 120px;">Số câu hiện có</th>
+                        <th style="width: 150px;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody id="adminCurriculumTable"></tbody>
+            </table>
+        </div>
+
+        <!-- TAB 1: NGÂN HÀNG CÂU HỎI -->
+        <div id="adminTab1" style="display: none;">
+            <div style="display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; justify-content: space-between;">
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button class="btn-sm btn-approve" style="background: #16a34a; padding: 10px 14px;" onclick="toggleImportBox()">📥 Nhập File Excel</button>
+                    <button class="btn-sm" style="background: #0284c7; color: white; padding: 10px 14px;" onclick="downloadSampleExcel()">📄 Tải mẫu Excel (.xlsx)</button>
+                    <button class="btn-sm" style="background: #0d9488; color: white; padding: 10px 14px;" onclick="openEditModal(null)">➕ Thêm 1 câu hỏi</button>
+                </div>
+                
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <label style="font-size: 12px; font-weight: bold; color: #334155;">🔍 Lọc theo Chương:</label>
+                    <select id="adminChapterFilter" class="form-control" style="width: auto; padding: 6px 10px;" onchange="renderAdminTables()">
+                        <option value="ALL">🌐 Tất cả các chương</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- KHU VỰC IMPORT EXCEL -->
+            <div class="import-box" id="importBox">
+                <h4 style="color: #15803d; margin-bottom: 10px;">📊 Nhập file Excel câu hỏi vào hệ thống</h4>
+                <div class="grid-2" style="margin-bottom: 10px;">
+                    <div class="form-group">
+                        <label style="color: #166534;">MÃ CHƯƠNG MẶC ĐỊNH (KHI FILE KHÔNG GHI CHƯƠNG):</label>
+                        <select id="importChapterSelect" class="form-control" style="background: #fff; font-weight: bold; color: #0f766e;"></select>
+                    </div>
+
+                    <div class="form-group">
+                        <label style="color: #166534;">CHỌN FILE EXCEL (.XLSX, .XLS):</label>
+                        <input type="file" id="excelFile" class="form-control" accept=".xlsx, .xls, .csv" style="background: #fff;" onchange="handleFileUpload(event)">
+                    </div>
+                </div>
+            </div>
+
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Mã Câu/Bài</th>
+                        <th>Loại Câu</th>
+                        <th>Chương / Chủ đề</th>
+                        <th>Mức Độ</th>
+                        <th>Nội dung câu hỏi</th>
+                        <th>Điểm XP</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody id="adminQTable"></tbody>
+            </table>
+        </div>
+
+        <!-- TAB 2: SINH VIÊN -->
+        <div id="adminTab2" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <p style="font-size: 13px; color: #475569;">Danh sách sinh viên, mật khẩu và điểm tích lũy XP:</p>
+                <button class="btn-sm btn-approve" style="background: #0d9488; padding: 8px 14px;" onclick="exportStudentScoresExcel()">📊 Xuất Bảng Điểm Excel</button>
+            </div>
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Mã Sinh Viên</th>
+                        <th>Họ và Tên</th>
+                        <th>Mật Khẩu</th>
+                        <th>Đăng nhập gần nhất</th>
+                        <th>Số câu</th>
+                        <th>Tổng XP</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody id="adminStudentTable"></tbody>
+            </table>
+        </div>
+
+        <!-- TAB 3: PHẢN HỒI -->
+        <div id="adminTab3" style="display: none;">
+            <p style="font-size: 13px; color: #475569; margin-bottom: 12px;">Danh sách bài làm tự luận sinh viên gửi phản hồi nhờ Giảng viên chấm duyệt lại:</p>
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Mã SV / Họ Tên</th>
+                        <th>Nội dung câu hỏi</th>
+                        <th>Bài làm của SV</th>
+                        <th>Lời nhắn gửi Giảng viên</th>
+                        <th>Thao tác chấm</th>
+                    </tr>
+                </thead>
+                <tbody id="adminAppealTable"></tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<!-- MODAL POPUPS -->
+<!-- MODAL THÔNG BÁO HOÀN THÀNH CHƯƠNG -->
+<div class="modal-overlay" id="completionModal">
+    <div class="modal-card" style="max-width: 440px; text-align: center;">
+        <div style="font-size: 44px; margin-bottom: 8px;">🎉</div>
+        <p style="font-size: 15px; font-weight: 600; color: #0f766e; line-height: 1.5; margin-bottom: 20px;">
+            Chúc mừng, bạn đã hoàn thành. Bạn có muốn tiếp tục làm không?
+        </p>
+        <div style="display: flex; justify-content: center; gap: 12px;">
+            <button class="btn-sm btn-approve" style="padding: 10px 24px; font-size: 14px;" onclick="handleModalResponse(true)">Có</button>
+            <button class="btn-sm btn-delete" style="padding: 10px 24px; font-size: 14px; background:#dc2626; color:white;" onclick="handleModalResponse(false)">Không</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL ĐĂNG NHẬP ADMIN -->
+<div class="modal-overlay" id="authModal">
+    <div class="modal-card" style="max-width: 380px;">
+        <div class="modal-header">
+            <span>🔒 ĐĂNG NHẬP GIẢNG VIÊN</span>
+            <span style="cursor:pointer;" onclick="closeModal('authModal')">✕</span>
+        </div>
+        <form onsubmit="verifyAdminPassword(event)">
+            <div class="form-group" style="margin-top: 10px;">
+                <label>MẬT KHẨU QUẢN TRỊ (*)</label>
+                <input type="password" id="txtAdminPass" class="form-control" placeholder="Nhập mật khẩu quản trị..." required>
+            </div>
+            <div class="modal-footer" style="margin-top: 16px;">
+                <button type="button" class="btn-sm" style="background:#cbd5e1;" onclick="closeModal('authModal')">Hủy bỏ</button>
+                <button type="submit" class="btn-sm btn-approve" style="padding: 8px 16px;">🔑 Đăng nhập</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL ĐỔI MẬT KHẨU ADMIN -->
+<div class="modal-overlay" id="adminChangePassModal">
+    <div class="modal-card" style="max-width: 380px;">
+        <div class="modal-header">
+            <span>🔑 ĐỔI MẬT KHẨU ADMIN</span>
+            <span style="cursor:pointer;" onclick="closeModal('adminChangePassModal')">✕</span>
+        </div>
+        <form onsubmit="saveAdminNewPass(event)">
+            <div class="form-group">
+                <label>MẬT KHẨU HIỆN TẠI (*)</label>
+                <input type="password" id="txtAdminCurrentPass" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label>MẬT KHẨU MỚI (*)</label>
+                <input type="password" id="txtAdminNewPass" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label>XÁC NHẬN MẬT KHẨU MỚI (*)</label>
+                <input type="password" id="txtAdminConfirmPass" class="form-control" required>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-sm" style="background:#cbd5e1;" onclick="closeModal('adminChangePassModal')">Hủy bỏ</button>
+                <button type="submit" class="btn-sm btn-approve">💾 Lưu Mật Khẩu</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL ĐỔI MẬT KHẨU SINH VIÊN -->
+<div class="modal-overlay" id="studentChangePassModal">
+    <div class="modal-card" style="max-width: 380px;">
+        <div class="modal-header">
+            <span>🔑 ĐỔI MẬT KHẨU TÀI KHOẢN</span>
+            <span style="cursor:pointer;" onclick="closeModal('studentChangePassModal')">✕</span>
+        </div>
+        <form onsubmit="saveStudentNewPass(event)">
+            <div class="form-group">
+                <label>MẬT KHẨU CŨ (*)</label>
+                <input type="password" id="txtStudentOldPass" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label>MẬT KHẨU MỚI (*)</label>
+                <input type="password" id="txtStudentNewPass" class="form-control" required>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-sm" style="background:#cbd5e1;" onclick="closeModal('studentChangePassModal')">Hủy bỏ</button>
+                <button type="submit" class="btn-sm btn-approve">💾 Cập Nhật</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL SỬA CHƯƠNG -->
+<div class="modal-overlay" id="editChapterModal">
+    <div class="modal-card" style="max-width: 480px;">
+        <div class="modal-header">
+            <span>✏️ CHỈNH SỬA THÔNG TIN CHƯƠNG</span>
+            <span style="cursor:pointer;" onclick="closeModal('editChapterModal')">✕</span>
+        </div>
+        <form onsubmit="saveEditChapter(event)">
+            <input type="hidden" id="editChapterIndex">
+            <div class="form-group">
+                <label>MÃ CHƯƠNG (*)</label>
+                <input type="text" id="txtEditChapterCode" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label>TÊN CHI TIẾT CHƯƠNG (*)</label>
+                <input type="text" id="txtEditChapterName" class="form-control" required>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-sm" style="background:#cbd5e1;" onclick="closeModal('editChapterModal')">Hủy bỏ</button>
+                <button type="submit" class="btn-sm btn-approve">💾 Lưu Thay Đổi</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL EDIT CÂU HỎI -->
+<div class="modal-overlay" id="editModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <span id="modalTitle">✏️ CHI TIẾT CÂU HỎI</span>
+            <span style="cursor:pointer;" onclick="closeModal('editModal')">✕</span>
+        </div>
+        <form onsubmit="saveQuestion(event)">
+            <input type="hidden" id="editQIndex">
+            <div class="grid-3">
+                <div class="form-group"><label>MÃ CÂU / MÃ BÀI</label><input type="text" id="modalQId" class="form-control" required></div>
+                <div class="form-group">
+                    <label>LOẠI CÂU HỎI</label>
+                    <select id="modalQType" class="form-control" onchange="toggleOptionFields()">
+                        <option value="Trắc nghiệm">Trắc nghiệm</option>
+                        <option value="Điền từ">Điền từ</option>
+                        <option value="Tự luận">Tự luận</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>MỨC ĐỘ</label>
+                    <select id="modalQDiff" class="form-control">
+                        <option value="Dễ">Dễ</option>
+                        <option value="Trung bình">Trung bình</option>
+                        <option value="Khó">Khó</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="form-group">
+                    <label>CHƯƠNG / CHỦ ĐỀ (*)</label>
+                    <input type="text" id="modalQChapter" class="form-control" list="chapterSuggestions" placeholder="Ví dụ: C1, C2, C3..." required>
+                    <datalist id="chapterSuggestions"></datalist>
+                </div>
+                <div class="form-group"><label>ĐIỂM (XP)</label><input type="number" id="modalQXp" class="form-control" required></div>
+            </div>
+
+            <div class="form-group">
+                <label>NỘI DUNG CÂU HỎI (*)</label>
+                <textarea id="modalQText" class="textarea-input" rows="3" required></textarea>
+            </div>
+
+            <div id="mcqFields">
+                <div class="grid-2">
+                    <div class="form-group"><label>ĐÁP ÁN A</label><input type="text" id="optA" class="form-control"></div>
+                    <div class="form-group"><label style="color:#d97706;">GIẢI THÍCH NẾU CHỌN A (SAI)</label><input type="text" id="expA" class="form-control" placeholder="Vì sao A sai..."></div>
+                    
+                    <div class="form-group"><label>ĐÁP ÁN B</label><input type="text" id="optB" class="form-control"></div>
+                    <div class="form-group"><label style="color:#d97706;">GIẢI THÍCH NẾU CHỌN B (SAI)</label><input type="text" id="expB" class="form-control" placeholder="Vì sao B sai..."></div>
+                    
+                    <div class="form-group"><label>ĐÁP ÁN C</label><input type="text" id="optC" class="form-control"></div>
+                    <div class="form-group"><label style="color:#d97706;">GIẢI THÍCH NẾU CHỌN C (SAI)</label><input type="text" id="expC" class="form-control" placeholder="Vì sao C sai..."></div>
+                    
+                    <div class="form-group"><label>ĐÁP ÁN D</label><input type="text" id="optD" class="form-control"></div>
+                    <div class="form-group"><label style="color:#d97706;">GIẢI THÍCH NẾU CHỌN D (SAI)</label><input type="text" id="expD" class="form-control" placeholder="Vì sao D sai..."></div>
+                </div>
+            </div>
+
+            <div class="form-group"><label>ĐÁP ÁN ĐÚNG (*)</label><input type="text" id="modalCorrectAnswer" class="form-control" required></div>
+            <div class="form-group"><label>GIẢI THÍCH ĐÁP ÁN ĐÚNG / LỜI GIẢI CHI TIẾT</label><textarea id="modalQSolution" class="textarea-input" rows="2"></textarea></div>
+            <div class="form-group"><label>GIẢI THÍCH CHUNG KHI CHỌN SAI</label><textarea id="modalWrongExplain" class="textarea-input" rows="2" placeholder="Hiển thị nếu chưa có giải thích chi tiết cho từng đáp án..."></textarea></div>
+
+            <div class="grid-2">
+                <div class="form-group"><label>NHẮC LẠI LÝ THUYẾT TRỌNG TÂM</label><textarea id="modalTheory" class="textarea-input" rows="2"></textarea></div>
+                <div class="form-group"><label>GỢI Ý (HINT)</label><textarea id="modalHint" class="textarea-input" rows="2"></textarea></div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-sm" style="background:#cbd5e1;" onclick="closeModal('editModal')">Hủy bỏ</button>
+                <button type="submit" class="btn-sm btn-approve" style="padding: 10px 18px;">💾 Lưu thay đổi</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal-overlay" id="deleteConfirmModal">
+    <div class="modal-card" style="max-width: 420px; text-align: center;">
+        <div style="font-size: 40px; margin-bottom: 10px;">⚠️</div>
+        <h3 style="font-size: 16px; color: #0f172a; margin-bottom: 8px;">XÁC NHẬN XÓA CÂU HỎI</h3>
+        <p style="font-size: 14px; color: #475569; margin-bottom: 20px;">Bạn có chắc chắn muốn xóa câu hỏi này?</p>
+        <div style="display: flex; justify-content: center; gap: 12px;">
+            <button class="btn-sm" style="background:#cbd5e1; padding: 10px 20px; font-size:13px;" onclick="closeModal('deleteConfirmModal')">Quay lại</button>
+            <button class="btn-sm btn-delete" style="padding: 10px 20px; font-size:13px;" onclick="confirmDelete()">Đúng, xóa vĩnh viễn</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL BẢNG XẾP HẠNG -->
+<div class="modal-overlay" id="leaderboardModal">
+    <div class="modal-card" style="max-width: 400px;">
+        <div class="modal-header">
+            <span>🏆 BẢNG XẾP HẠNG TUẦN</span>
+            <span style="cursor:pointer;" onclick="closeModal('leaderboardModal')">✕</span>
+        </div>
+        <div id="leaderboardContent" style="margin-top: 10px;"></div>
+        <div style="font-size: 11px; color: #64748b; margin-top: 10px; text-align: center;">
+            🎁 Top 3 sẽ được thưởng thêm 100, 50, 20 XP vào cuối tuần!
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentAdminPassword = "123456";
+    let isAdminLoggedIn = false;
+
+    let curriculumList = [
+        { code: "C1", name: "Đại cương về Hóa phân tích" },
+        { code: "C2", name: "Các cách biểu diễn nồng độ dung dịch" },
+        { code: "C3", name: "Phương pháp Phân tích Khối lượng (Cân)" },
+        { code: "C4", name: "Đại cương về phương pháp chuẩn độ" },
+        { code: "C5", name: "Phương pháp Chuẩn độ Axit - Bazơ" },
+        { code: "C6", name: "Phương pháp Chuẩn độ Tạo phức (Complexon)" },
+        { code: "C7", name: "Phương pháp Chuẩn độ Kết tủa" },
+        { code: "C8", name: "Phương pháp Chuẩn độ Oxy hóa - Khử" }
+    ];
+
+    let questions = [
+        {
+            id: "C1_01", chapter: "C1", type: "Trắc nghiệm", difficulty: "Dễ",
+            question: "Hãy xác định tên phương pháp phân tích được sử dụng trong trích dẫn dưới đây:\nCân 20 viên thuốc, xác định khối lượng trung bình, nghiền thành bột mịn, cân chính xác 1 lượng bột viên tương ứng với 0,5g acid acetylsalicylic, thêm 30ml dung dịch natri hydroxyd 0,5N, đun sôi nhẹ trong 10 phút, rồi chuẩn độ lượng natri hydroxyd thừa bằng dung dịch acid hydrocloric 0,5N, dùng dung dịch đỏ phenol làm chỉ thị.",
+            optA: "Phương pháp khối lượng", optB: "Phương pháp chuẩn độ", optC: "Phương pháp dung dịch", optD: "Phương pháp quang học",
+            correctAnswer: "B", xp: 5,
+            solution: "Chế phẩm sau khi được nghiền thành bột mịn, cho tác dụng với dung dịch NaOH. Lượng NaOH dư được CHUẨN ĐỘ bằng dung dịch HCl 0,5N.",
+            explainA: "Đây không phải phương pháp khối lượng vì kết quả cuối cùng dựa trên thể tích chất chuẩn độ (HCl) chứ không dựa trên việc cân sản phẩm kết tủa.",
+            explainC: "Không có 'Phương pháp dung dịch' trong phân loại các phương pháp định lượng Hóa phân tích.",
+            wrongExplain: "Đọc kỹ các từ khóa trong đề bài như 'chuẩn độ', 'dung dịch chỉ thị'.",
+            theory: "Nguyên tắc của phương pháp chuẩn độ: Dựa vào thuốc thử dùng phản ứng vừa đủ với thể tích dung dịch chất cần định lượng.",
+            hint: "từ khoá 'chuẩn độ'"
+        },
+        {
+            id: "C2_01", chapter: "C2", type: "Trắc nghiệm", difficulty: "Trung bình",
+            question: "Phương pháp phân tích khối lượng dựa trên việc đo chính xác .......... của dạng cân thu được sau khi kết tủa và nung.",
+            optA: "Thể tích", optB: "Khối lượng", optC: "Nồng độ", optD: "Mật độ quang",
+            correctAnswer: "B", xp: 10,
+            solution: "Đo khối lượng sản phẩm tinh khiết thu được.", wrongExplain: "", theory: "Định lượng bằng cân phân tích.", hint: "Chú ý tên gọi phương pháp"
+        }
+    ];
+
+    let studentList = [
+        { id: "SV190012", name: "Nguyễn Văn Nam", pass: "123", lastLogin: "14:20 20/05/2026", lastActiveDate: "2026-05-20", streak: 1, answeredCount: 5, totalXP: 35 },
+        { id: "SV190015", name: "Trần Thị Lan", pass: "123", lastLogin: "15:05 20/05/2026", lastActiveDate: "2026-05-20", streak: 3, answeredCount: 8, totalXP: 160 }
+    ];
+
+    // Hệ thống Cấp độ dựa trên XP
+    function getLevel(xp) {
+        if (xp >= 500) return "Tiến sĩ 🎓";
+        if (xp >= 300) return "Thạc sĩ 🔬";
+        if (xp >= 100) return "Nghiên cứu sinh 🧪";
+        if (xp >= 50) return "Trợ giảng 📚";
+        return "Tân binh 👶";
+    }
+
+    let pendingAppeals = [];
+    let selectedStudentChapter = "ALL";
+    let filteredQuestions = [];
+    let currentIndex = 0;
+    let selectedAnswer = "";
+    let totalXP = 0;
+    let currentStudent = null;
+    let deleteTargetIndex = null;
+
+    window.onload = function() {
+        syncCurriculumFromQuestions();
+        updateChapterDropdowns();
+    };
+
+    function syncCurriculumFromQuestions() {
+        questions.forEach(q => {
+            if (q.chapter) {
+                let found = curriculumList.find(c => c.code === q.chapter);
+                if (!found) {
+                    let cNum = q.chapter.replace(/\D/g, '');
+                    let cTitle = cNum ? `Chương ${cNum}` : q.chapter;
+                    curriculumList.push({ code: q.chapter, name: cTitle });
+                }
+            }
+        });
+        curriculumList.sort((a, b) => a.code.localeCompare(b.code, undefined, {numeric: true, sensitivity: 'base'}));
+    }
+
+    function getChapterDisplayName(code) {
+        let found = curriculumList.find(c => c.code === code);
+        if (found) {
+            return `${found.code}: ${found.name}`;
+        }
+        let cNum = code.replace(/\D/g, '');
+        return cNum ? `Chương ${cNum}` : code;
+    }
+
+    function updateChapterDropdowns() {
+        const chapterDatalist = document.getElementById('chapterSuggestions');
+        if (chapterDatalist) {
+            chapterDatalist.innerHTML = '';
+            curriculumList.forEach(ch => { chapterDatalist.innerHTML += `<option value="${ch.code}">${ch.name}</option>`; });
+        }
+
+        const adminFilter = document.getElementById('adminChapterFilter');
+        if (adminFilter) {
+            const currentVal = adminFilter.value;
+            let optionsHtml = '<option value="ALL">🌐 Tất cả các chương</option>';
+            curriculumList.forEach(ch => {
+                optionsHtml += `<option value="${ch.code}">${ch.code} - ${ch.name}</option>`;
+            });
+            adminFilter.innerHTML = optionsHtml;
+            adminFilter.value = curriculumList.some(c => c.code === currentVal) ? currentVal : "ALL";
+        }
+
+        const importSelect = document.getElementById('importChapterSelect');
+        if (importSelect) {
+            let optionsHtml = '';
+            curriculumList.forEach(ch => {
+                optionsHtml += `<option value="${ch.code}">${ch.code} - ${ch.name}</option>`;
+            });
+            importSelect.innerHTML = optionsHtml;
+        }
+    }
+
+    function renderStudentChapterTabs() {
+        const tabBar = document.getElementById('studentChapterTabBar');
+        let html = `<button class="chapter-tab-btn ${selectedStudentChapter === 'ALL' ? 'active' : ''}" onclick="selectChapter('ALL')">🌐 Tất Cả Bài Ôn</button>`;
+        
+        curriculumList.forEach(ch => {
+            let qCount = questions.filter(q => q.chapter === ch.code).length;
+            html += `<button class="chapter-tab-btn ${selectedStudentChapter === ch.code ? 'active' : ''}" onclick="selectChapter('${ch.code}')">${ch.code}: ${ch.name} (${qCount})</button>`;
+        });
+        tabBar.innerHTML = html;
+    }
+
+    function selectChapter(chCode) {
+        selectedStudentChapter = chCode;
+        renderStudentChapterTabs();
+        filterQuestionsByChapter();
+        currentIndex = 0;
+
+        if (filteredQuestions.length > 0) {
+            renderQuestion();
+        } else {
+            let chTitle = getChapterDisplayName(chCode);
+            document.getElementById('lblQuestionText').innerText = `Chưa có câu hỏi nào thuộc ${chTitle}!`;
+            document.getElementById('answerArea').innerHTML = '';
+            document.getElementById('btnCheck').disabled = true;
+            document.getElementById('progressBar').style.width = '0%';
+        }
+    }
+
+    function filterQuestionsByChapter() {
+        filteredQuestions = selectedStudentChapter === "ALL" ? [...questions] : questions.filter(q => q.chapter === selectedStudentChapter);
+    }
+
+    function extractChapterCode(rawChapter, rawId, defaultSelectChap) {
+        let strChap = String(rawChapter || "").trim();
+        let strId = String(rawId || "").trim();
+
+        if (strChap) {
+            let match = strChap.match(/C\d+/i);
+            if (match) return match[0].toUpperCase();
+            
+            let matchNum = strChap.match(/(?:Chương|Chương\s*)(\d+)/i);
+            if (matchNum) return "C" + matchNum[1];
+            
+            return strChap.toUpperCase();
+        }
+
+        if (strId) {
+            let match = strId.match(/C\d+/i);
+            if (match) return match[0].toUpperCase();
+        }
+
+        return defaultSelectChap || "C1";
+    }
+
+    function saveNewChapter(e) {
+        e.preventDefault();
+        let code = document.getElementById('txtNewChapterCode').value.trim().toUpperCase();
+        let name = document.getElementById('txtNewChapterName').value.trim();
+
+        if (curriculumList.some(c => c.code === code)) {
+            return alert("❌ Mã chương này đã tồn tại! Vui lòng chọn mã khác.");
+        }
+
+        curriculumList.push({ code: code, name: name });
+        curriculumList.sort((a, b) => a.code.localeCompare(b.code, undefined, {numeric: true, sensitivity: 'base'}));
+
+        document.getElementById('txtNewChapterCode').value = '';
+        document.getElementById('txtNewChapterName').value = '';
+
+        updateChapterDropdowns();
+        renderStudentChapterTabs();
+        renderAdminTables();
+        alert("🎉 Đã thêm chương mới thành công!");
+    }
+
+    function openEditChapterModal(index) {
+        let item = curriculumList[index];
+        document.getElementById('editChapterIndex').value = index;
+        document.getElementById('txtEditChapterCode').value = item.code;
+        document.getElementById('txtEditChapterName').value = item.name;
+        document.getElementById('editChapterModal').classList.add('active');
+    }
+
+    function saveEditChapter(e) {
+        e.preventDefault();
+        let index = parseInt(document.getElementById('editChapterIndex').value);
+        let oldCode = curriculumList[index].code;
+        let newCode = document.getElementById('txtEditChapterCode').value.trim().toUpperCase();
+        let newName = document.getElementById('txtEditChapterName').value.trim();
+
+        if (oldCode !== newCode && curriculumList.some((c, i) => i !== index && c.code === newCode)) {
+            return alert("❌ Mã chương mới trùng với chương đã tồn tại!");
+        }
+
+        if (oldCode !== newCode) {
+            questions.forEach(q => {
+                if (q.chapter === oldCode) q.chapter = newCode;
+            });
+        }
+
+        curriculumList[index] = { code: newCode, name: newName };
+        closeModal('editChapterModal');
+        updateChapterDropdowns();
+        renderStudentChapterTabs();
+        renderAdminTables();
+        alert("🎉 Đã cập nhật thông tin chương!");
+    }
+
+    function deleteChapter(index) {
+        let item = curriculumList[index];
+        let qCount = questions.filter(q => q.chapter === item.code).length;
+
+        if (qCount > 0) {
+            if (!confirm(`⚠️ Chương [${item.code}] đang có ${qCount} câu hỏi trong Ngân hàng câu hỏi. Bạn vẫn muốn xóa chương này?`)) {
+                return;
+            }
+        } else {
+            if (!confirm(`Bạn có chắc muốn xóa chương [${item.code} - ${item.name}]?`)) return;
+        }
+
+        curriculumList.splice(index, 1);
+        updateChapterDropdowns();
+        renderStudentChapterTabs();
+        renderAdminTables();
+        alert("🗑️ Đã xóa chương!");
+    }
+
+    // --- CẬP NHẬT HÀM ĐỌC EXCEL ĐỂ LẤY ĐƯỢC CÁC CỘT GIẢI THÍCH CHI TIẾT ---
+    function handleFileUpload(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const defaultChapter = document.getElementById('importChapterSelect').value;
+        const reader = new FileReader();
+
+        reader.onload = function(evt) {
+            try {
+                const data = new Uint8Array(evt.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                const rawData = XLSX.utils.sheet_to_json(worksheet, {header: 1, defval: ""});
+
+                let headerIdx = -1;
+                for(let i = 0; i < Math.min(rawData.length, 10); i++) {
+                    if(rawData[i] && rawData[i].some(cell => {
+                        const str = String(cell).toLowerCase();
+                        return str.includes("mã") || str.includes("nội dung") || str.includes("câu hỏi") || str.includes("chương");
+                    })) {
+                        headerIdx = i;
+                        break;
+                    }
+                }
+
+                const startIdx = headerIdx >= 0 ? headerIdx + 1 : 0;
+                let addedCount = 0;
+                let updatedCount = 0;
+                let currentTimestamp = Date.now();
+
+                for(let i = startIdx; i < rawData.length; i++) {
+                    const row = rawData[i];
+                    const qText = row[4] !== undefined ? String(row[4]).trim() : "";
+                    const qId = row[0] !== undefined ? String(row[0]).trim() : "";
+
+                    const isHeaderRow = qId.toLowerCase().includes("mã") || qText.toLowerCase().includes("nội dung câu hỏi");
+
+                    if ((qText !== "" || qId !== "") && !isHeaderRow) {
+                        const finalChapter = extractChapterCode(row[1], qId, defaultChapter);
+                        let questionId = qId ? qId : `${finalChapter}_${currentTimestamp}_${i}`;
+
+                        // MAPPING CỘT EXCEL MỚI VÀO OBJECT
+                        let newQObj = {
+                            id: questionId,
+                            chapter: finalChapter,
+                            type: String(row[2] || "Trắc nghiệm").trim(),
+                            difficulty: String(row[3] || "Trung bình").trim(),
+                            question: qText || "Nội dung câu hỏi...",
+                            optA: String(row[5] || "").trim(),
+                            explainA: String(row[6] || "").trim(),
+                            optB: String(row[7] || "").trim(),
+                            explainB: String(row[8] || "").trim(),
+                            optC: String(row[9] || "").trim(),
+                            explainC: String(row[10] || "").trim(),
+                            optD: String(row[11] || "").trim(),
+                            explainD: String(row[12] || "").trim(),
+                            correctAnswer: String(row[13] || "A").trim().toUpperCase(),
+                            xp: parseInt(row[14]) || 10,
+                            solution: String(row[15] || "").trim(),
+                            wrongExplain: String(row[16] || "").trim(),
+                            theory: String(row[17] || "").trim(),
+                            hint: String(row[18] || "").trim()
+                        };
+
+                        let existingIndex = questions.findIndex(q => q.id === questionId);
+                        if (existingIndex >= 0) {
+                            questions[existingIndex] = newQObj;
+                            updatedCount++;
+                        } else {
+                            questions.push(newQObj);
+                            addedCount++;
+                        }
+                    }
+                }
+
+                e.target.value = '';
+                
+                syncCurriculumFromQuestions();
+                updateChapterDropdowns();
+                filterQuestionsByChapter();
+                renderStudentChapterTabs();
+                renderAdminTables();
+
+                if (typeof renderQuestion === "function" && filteredQuestions.length > 0) {
+                    renderQuestion();
+                }
+
+                alert(`🎉 Import thành công!\n- Đã thêm mới: ${addedCount} câu hỏi.\n- Đã cập nhật/đè: ${updatedCount} câu trùng mã.`);
+                toggleImportBox();
+
+            } catch (error) {
+                console.error(error);
+                alert("❌ Đã xảy ra lỗi khi đọc file Excel!");
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    function startQuiz(e) {
+        e.preventDefault();
+        const sId = document.getElementById('txtStudentId').value.trim();
+        const sName = document.getElementById('txtFullName').value.trim();
+        const sPass = document.getElementById('txtStudentPassword').value.trim();
+        
+        const now = new Date();
+        const nowStr = now.toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'}) + " " + now.toLocaleDateString('vi-VN');
+        const todayStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
+
+        let found = studentList.find(s => s.id === sId);
+
+        if (found) {
+            if (found.pass && found.pass !== sPass) {
+                return alert("❌ Mật khẩu Sinh viên không đúng! Vui lòng kiểm tra lại.");
+            }
+            
+            // Gamification: Xử lý chuỗi (Streak) & Thưởng điểm
+            let lastDate = new Date(found.lastActiveDate);
+            let diffDays = Math.floor((now - lastDate) / (1000 * 60 * 60 * 24));
+            
+            if (diffDays === 1) {
+                found.streak += 1;
+                found.totalXP += 10; // Thưởng 10 XP mỗi ngày đăng nhập liên tiếp
+                alert(`🔥 Chuỗi ${found.streak} ngày! Bạn được thưởng +10 XP.`);
+            } else if (diffDays > 1 && diffDays <= 7) {
+                found.streak = 1; // Giữ tần suất 1 lần/tuần
+                found.totalXP += 20; // Thưởng luyện tập hàng tuần
+                alert(`🎉 Chào mừng trở lại trong tuần! Bạn được thưởng +20 XP chuyên cần.`);
+            } else if (diffDays > 7) {
+                found.streak = 1; // Reset chuỗi nếu quá 7 ngày
+            }
+
+            found.name = sName;
+            found.pass = sPass;
+            found.lastLogin = nowStr;
+            found.lastActiveDate = todayStr;
+            currentStudent = found;
+            totalXP = found.totalXP;
+        } else {
+            currentStudent = { id: sId, name: sName, pass: sPass, lastLogin: nowStr, lastActiveDate: todayStr, streak: 1, answeredCount: 0, totalXP: 0 };
+            studentList.push(currentStudent);
+            totalXP = 0;
+        }
+
+        // Cập nhật UI hiển thị Level và Streak
+        let levelHtml = `<span class="level-badge">${getLevel(currentStudent.totalXP)}</span>`;
+        let streakHtml = currentStudent.streak > 1 ? `<span class="streak-icon" title="${currentStudent.streak} ngày liên tiếp">🔥${currentStudent.streak}</span>` : '';
+        
+        document.getElementById('lblStudentInfo').innerHTML = `${currentStudent.name} ${levelHtml} ${streakHtml}`;
+        document.getElementById('xpCount').innerText = totalXP;
+        
+        document.getElementById('welcomeScreen').style.display = 'none';
+        document.getElementById('quizScreen').style.display = 'flex';
+        
+        renderStudentChapterTabs();
+        selectChapter('ALL');
+        updatePendingBadges();
+    }
+
+    function handleStudentLogout() {
+        currentStudent = null;
+        document.getElementById('quizScreen').style.display = 'none';
+        document.getElementById('welcomeScreen').style.display = 'flex';
+        document.getElementById('txtStudentPassword').value = '';
+        closeModal('completionModal');
+    }
+
+    function openStudentChangePassModal() {
+        document.getElementById('txtStudentOldPass').value = '';
+        document.getElementById('txtStudentNewPass').value = '';
+        document.getElementById('studentChangePassModal').classList.add('active');
+    }
+
+    function saveStudentNewPass(e) {
+        e.preventDefault();
+        const oldP = document.getElementById('txtStudentOldPass').value.trim();
+        const newP = document.getElementById('txtStudentNewPass').value.trim();
+
+        if (oldP !== currentStudent.pass) {
+            return alert("❌ Mật khẩu cũ không chính xác!");
+        }
+
+        currentStudent.pass = newP;
+        closeModal('studentChangePassModal');
+        alert("🎉 Đổi mật khẩu thành công!");
+    }
+
+    function openAdminChangePassModal() {
+        document.getElementById('txtAdminCurrentPass').value = '';
+        document.getElementById('txtAdminNewPass').value = '';
+        document.getElementById('txtAdminConfirmPass').value = '';
+        document.getElementById('adminChangePassModal').classList.add('active');
+    }
+
+    function saveAdminNewPass(e) {
+        e.preventDefault();
+        const curP = document.getElementById('txtAdminCurrentPass').value;
+        const newP = document.getElementById('txtAdminNewPass').value;
+        const cfP = document.getElementById('txtAdminConfirmPass').value;
+
+        if (curP !== currentAdminPassword) {
+            return alert("❌ Mật khẩu Admin hiện tại không đúng!");
+        }
+        if (newP !== cfP) {
+            return alert("❌ Mật khẩu mới và Xác nhận mật khẩu không khớp!");
+        }
+
+        currentAdminPassword = newP;
+        closeModal('adminChangePassModal');
+        alert("🎉 Đã đổi mật khẩu Admin thành công!");
+    }
+
+    function renderQuestion() {
+        if (filteredQuestions.length === 0) return;
+        const q = filteredQuestions[currentIndex];
+        document.getElementById('progressBar').style.width = ((currentIndex + 1) / filteredQuestions.length * 100) + '%';
+        
+        document.getElementById('lblChapter').innerText = getChapterDisplayName(q.chapter);
+        document.getElementById('lblDifficulty').innerText = q.difficulty || 'Trung bình';
+        document.getElementById('lblQuestionText').innerText = q.question;
+        
+        const area = document.getElementById('answerArea');
+        area.innerHTML = '';
+        selectedAnswer = "";
+        document.getElementById('btnCheck').disabled = true;
+
+        if (q.type === 'Trắc nghiệm') {
+            document.getElementById('btnCheck').innerText = "KIỂM TRA ĐÁP ÁN";
+            const list = document.createElement('div');
+            list.className = 'options-list';
+            
+            const opts = [
+                { key: "A", text: q.optA }, { key: "B", text: q.optB },
+                { key: "C", text: q.optC }, { key: "D", text: q.optD }
+            ];
+
+            opts.forEach(opt => {
+                if(opt.text) {
+                    const item = document.createElement('div');
+                    item.className = 'option-item';
+                    item.innerHTML = `<strong>${opt.key}.</strong> ${opt.text}`;
+                    item.onclick = () => {
+                        document.querySelectorAll('.option-item').forEach(el => el.classList.remove('selected'));
+                        item.classList.add('selected');
+                        selectedAnswer = opt.key;
+                        document.getElementById('btnCheck').disabled = false;
+                    };
+                    list.appendChild(item);
+                }
+            });
+            area.appendChild(list);
+        } else {
+            document.getElementById('btnCheck').innerText = "NỘP CÂU TRẢ LỜI";
+            const textarea = document.createElement('textarea');
+            textarea.className = 'textarea-input';
+            textarea.rows = 4;
+            textarea.placeholder = q.type === 'Điền từ' ? 'Gõ từ/cụm từ điền vào chỗ trống...' : 'Gõ câu trả lời tự luận của bạn...';
+            textarea.oninput = (e) => {
+                selectedAnswer = e.target.value.trim();
+                document.getElementById('btnCheck').disabled = selectedAnswer.length < 1;
+            };
+            area.appendChild(textarea);
+        }
+    }
+
+    function checkAnswer() {
+        const q = filteredQuestions[currentIndex];
+        const statusEl = document.getElementById('sheetStatus');
+        const contentEl = document.getElementById('sheetContent');
+        const appealEl = document.getElementById('appealContainer');
+        const actionBtns = document.getElementById('actionButtons');
+        
+        appealEl.innerHTML = '';
+        actionBtns.innerHTML = '';
+
+        const isCorrect = selectedAnswer.trim().toLowerCase() === q.correctAnswer.trim().toLowerCase();
+        currentStudent.answeredCount += 1;
+
+        if (isCorrect) {
+            totalXP += q.xp;
+            currentStudent.totalXP = totalXP;
+            document.getElementById('xpCount').innerText = totalXP;
+            
+            // Cập nhật lại Level trên UI nếu nhảy cấp
+            document.getElementById('lblStudentInfo').innerHTML = `${currentStudent.name} <span class="level-badge">${getLevel(totalXP)}</span> <span class="streak-icon">${currentStudent.streak > 1 ? '🔥' + currentStudent.streak : ''}</span>`;
+            
+            statusEl.innerHTML = `<span style="color:#16a34a">🎉 CHÍNH XÁC! (+${q.xp} XP)</span>`;
+            contentEl.innerHTML = `
+                <div class="section-box box-solution">
+                    <strong>📝 Lời giải chi tiết:</strong><br>${q.solution || 'Chính xác!'}
+                    ${q.theory ? `<br><br>💡 <strong>Lý thuyết:</strong> ${q.theory}` : ''}
+                </div>
+            `;
+            
+            // Nếu đúng, chỉ cần hiển thị nút ĐI TIẾP
+            actionBtns.innerHTML = `<button class="btn-check" onclick="nextQuestion()">CÂU TIẾP THEO ➔</button>`;
+        } else {
+            // Lấy giải thích cụ thể cho đáp án sinh viên vừa chọn (nếu có)
+            let specificExplain = "";
+            if (q.type === 'Trắc nghiệm' && selectedAnswer) {
+                specificExplain = q['explain' + selectedAnswer]; 
+            }
+
+            statusEl.innerHTML = `<span style="color:#dc2626">❌ CHƯA CHÍNH XÁC!</span>`;
+            
+            // ẨN ĐÁP ÁN ĐÚNG: Chỉ hiển thị lời giải thích vì sao chọn sai
+            contentEl.innerHTML = `
+                <div class="section-box box-wrong">
+                    ${specificExplain 
+                        ? `⚠️ <strong>Vì sao đáp án ${selectedAnswer} chưa đúng:</strong><br>${specificExplain.replace(/\n/g, '<br>')}` 
+                        : (q.wrongExplain ? `⚠️ <strong>Phân tích lỗi sai:</strong><br>${q.wrongExplain.replace(/\n/g, '<br>')}` : '💡 <i>Hãy suy nghĩ lại và thử tìm đáp án khác nhé!</i>')}
+                </div>
+            `;
+            
+            if (q.type !== 'Trắc nghiệm') {
+                appealEl.innerHTML = `
+                    <button class="btn-appeal" onclick="document.getElementById('appealForm').style.display='block'">📩 Bạn diễn đạt khác? Gửi Giảng viên duyệt lại bài này</button>
+                    <div id="appealForm" style="display:none; margin-top:8px;">
+                        <input type="text" id="txtAppealNote" class="form-control" placeholder="Gõ lời nhắn gửi Giảng viên..." style="font-size:12px;">
+                        <button class="btn-check" style="margin-top:6px; padding:10px; font-size:12px; background:#d97706;" onclick="submitAppeal()">🚀 GỬI YÊU CẦU DUYỆT ĐIỂM</button>
+                    </div>
+                `;
+            }
+            
+            // HIỂN THỊ SONG SONG 2 NÚT: LÀM LẠI VÀ ĐI TIẾP
+            let btnHtml = `<div style="display:flex; gap:10px; margin-top:12px;">`;
+            btnHtml += `<button class="btn-check" style="background:#64748b; flex:1; padding:12px; font-size:13px;" onclick="retryQuestion()">⬅️ LÀM LẠI CÂU NÀY</button>`;
+            btnHtml += `<button class="btn-check" style="flex:1; padding:12px; font-size:13px;" onclick="nextQuestion()">BỎ QUA & ĐI TIẾP ➔</button></div>`;
+            
+            actionBtns.innerHTML = btnHtml;
+        }
+        document.getElementById('sheetOverlay').classList.add('active');
+        updatePendingBadges();
+    }
+
+    // HÀM MỚI: CHO PHÉP SINH VIÊN LÀM LẠI CÂU HỎI HIỆN TẠI
+    function retryQuestion() {
+        // Đóng bảng thông báo
+        document.getElementById('sheetOverlay').classList.remove('active');
+        
+        // Reset lại lựa chọn trên giao diện để sinh viên chọn lại
+        selectedAnswer = "";
+        document.getElementById('btnCheck').disabled = true;
+        
+        // Xóa class 'selected' trên các nút trắc nghiệm
+        document.querySelectorAll('.option-item').forEach(el => el.classList.remove('selected'));
+        
+        // Xóa nội dung trong ô tự luận/điền từ (nếu có)
+        const textarea = document.querySelector('.textarea-input');
+        if (textarea) textarea.value = "";
+    }
+
+    function submitAppeal() {
+        const note = document.getElementById('txtAppealNote').value.trim();
+        if(!note) return alert("Vui lòng nhập lời nhắn!");
+        
+        pendingAppeals.push({
+            id: pendingAppeals.length + 1,
+            studentId: currentStudent.id,
+            studentName: currentStudent.name,
+            questionText: filteredQuestions[currentIndex].question,
+            studentAnswer: selectedAnswer,
+            appealNote: note,
+            maxXP: filteredQuestions[currentIndex].xp
+        });
+
+        alert("✅ Đã gửi lời nhắn tới Giảng viên!");
+        document.getElementById('sheetOverlay').classList.remove('active');
+        updatePendingBadges();
+        nextQuestion();
+    }
+
+    function nextQuestion() {
+        document.getElementById('sheetOverlay').classList.remove('active');
+        if (currentIndex < filteredQuestions.length - 1) {
+            currentIndex++;
+            renderQuestion();
+        } else {
+            document.getElementById('completionModal').classList.add('active');
+        }
+    }
+
+    /* XỬ LÝ NÚT CÓ / KHÔNG TRÊN MODAL HOÀN THÀNH */
+    function handleModalResponse(isContinue) {
+        closeModal('completionModal');
+        if (isContinue) {
+            selectChapter('ALL');
+        } else {
+            handleStudentLogout();
+        }
+    }
+
+    function handleAdminAuth() {
+        if (isAdminLoggedIn) {
+            isAdminLoggedIn = false;
+            document.getElementById('adminControls').style.display = 'none';
+            document.getElementById('btnAdminAuth').innerText = '🔒 Đăng nhập Admin';
+            document.getElementById('btnAdminAuth').style.background = '#d97706';
+            switchMode('student');
+            alert("🔒 Đã đăng xuất khỏi quyền Quản trị Admin!");
+        } else {
+            document.getElementById('txtAdminPass').value = '';
+            document.getElementById('authModal').classList.add('active');
+        }
+    }
+
+    function verifyAdminPassword(e) {
+        e.preventDefault();
+        if (document.getElementById('txtAdminPass').value === currentAdminPassword) {
+            isAdminLoggedIn = true;
+            closeModal('authModal');
+            document.getElementById('adminControls').style.display = 'flex';
+            document.getElementById('btnAdminAuth').innerText = '🔓 Đăng xuất Admin';
+            document.getElementById('btnAdminAuth').style.background = '#059669';
+            switchMode('admin');
+            alert("🔑 Đăng nhập thành công! Đã kích hoạt Bản điều khiển Giảng viên.");
+        } else {
+            alert("❌ Mật khẩu không chính xác! Vui lòng thử lại.");
+        }
+    }
+
+    function switchMode(mode) {
+        document.getElementById('btnModeStudent').classList.toggle('active', mode === 'student');
+        document.getElementById('btnModeAdmin').classList.toggle('active', mode === 'admin');
+        
+        if (mode === 'student') {
+            document.getElementById('studentView').style.display = 'flex';
+            document.getElementById('adminView').style.display = 'none';
+            renderStudentChapterTabs();
+        } else {
+            if (!isAdminLoggedIn) return;
+            document.getElementById('studentView').style.display = 'none';
+            document.getElementById('adminView').style.display = 'block';
+            renderAdminTables();
+        }
+    }
+
+    function switchAdminTab(tabIndex) {
+        document.getElementById('tabBtn0').classList.toggle('active', tabIndex === 0);
+        document.getElementById('tabBtn1').classList.toggle('active', tabIndex === 1);
+        document.getElementById('tabBtn2').classList.toggle('active', tabIndex === 2);
+        document.getElementById('tabBtn3').classList.toggle('active', tabIndex === 3);
+        
+        document.getElementById('adminTab0').style.display = tabIndex === 0 ? 'block' : 'none';
+        document.getElementById('adminTab1').style.display = tabIndex === 1 ? 'block' : 'none';
+        document.getElementById('adminTab2').style.display = tabIndex === 2 ? 'block' : 'none';
+        document.getElementById('adminTab3').style.display = tabIndex === 3 ? 'block' : 'none';
+    }
+
+    function renderAdminTables() {
+        const cTbody = document.getElementById('adminCurriculumTable');
+        cTbody.innerHTML = '';
+        curriculumList.forEach((c, idx) => {
+            let qCount = questions.filter(q => q.chapter === c.code).length;
+            cTbody.innerHTML += `
+                <tr>
+                    <td><b style="color:#0f766e;">${c.code}</b></td>
+                    <td><b>${c.name}</b></td>
+                    <td><span class="tag tag-topic">${qCount} câu hỏi</span></td>
+                    <td>
+                        <button class="btn-sm btn-view" onclick="openEditChapterModal(${idx})">✏️ Sửa</button>
+                        <button class="btn-sm btn-delete" onclick="deleteChapter(${idx})">🗑️ Xóa</button>
+                    </td>
+                </tr>
+            `;
+        });
+
+        const qTbody = document.getElementById('adminQTable');
+        qTbody.innerHTML = '';
+
+        const selectedFilterChap = document.getElementById('adminChapterFilter') ? document.getElementById('adminChapterFilter').value : "ALL";
+        let displayQuestions = selectedFilterChap === "ALL" ? questions : questions.filter(q => q.chapter === selectedFilterChap);
+
+        displayQuestions.forEach((q, idx) => {
+            const originalIndex = questions.indexOf(q);
+            qTbody.innerHTML += `
+                <tr>
+                    <td><b>${q.id}</b></td>
+                    <td>${q.type}</td>
+                    <td><span class="tag tag-topic">${getChapterDisplayName(q.chapter)}</span></td>
+                    <td><span class="tag tag-diff">${q.difficulty || 'Dễ'}</span></td>
+                    <td style="max-width:260px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${q.question}</td>
+                    <td><b>${q.xp} XP</b></td>
+                    <td>
+                        <button class="btn-sm btn-view" onclick="openEditModal(${originalIndex})">👁️ Xem/Sửa</button>
+                        <button class="btn-sm btn-delete" onclick="promptDelete(${originalIndex})">🗑️ Xóa</button>
+                    </td>
+                </tr>
+            `;
+        });
+
+        const sTbody = document.getElementById('adminStudentTable');
+        sTbody.innerHTML = '';
+        if (studentList.length === 0) {
+            sTbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#64748b;">Chưa có sinh viên nào đăng nhập.</td></tr>`;
+        } else {
+            studentList.forEach((s, idx) => {
+                sTbody.innerHTML += `
+                    <tr>
+                        <td><b>${s.id}</b></td>
+                        <td>${s.name}</td>
+                        <td><code style="background:#e2e8f0; padding:2px 6px; border-radius:4px; font-weight:bold;">${s.pass || '123'}</code></td>
+                        <td style="color:#64748b; font-size:12px;">${s.lastLogin}</td>
+                        <td>${s.answeredCount} câu</td>
+                        <td><b style="color:#0f766e; font-size:14px;">${s.totalXP} XP</b></td>
+                        <td>
+                            <button class="btn-sm" style="background:#f59e0b; color:white;" onclick="resetStudentScore(${idx})">🔄 Reset điểm</button>
+                            <button class="btn-sm" style="background:#0284c7; color:white;" onclick="adminResetStudentPass(${idx})">🔑 Reset Pass</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        const aTbody = document.getElementById('adminAppealTable');
+        aTbody.innerHTML = '';
+        if (pendingAppeals.length === 0) {
+            aTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#64748b;">Không có bài làm nào đang chờ duyệt.</td></tr>`;
+        } else {
+            pendingAppeals.forEach((item, idx) => {
+                aTbody.innerHTML += `
+                    <tr>
+                        <td><b>${item.studentName}</b><br><small>${item.studentId}</small></td>
+                        <td>${item.questionText}</td>
+                        <td style="color:#0369a1;"><em>"${item.studentAnswer}"</em></td>
+                        <td style="color:#b45309;">💬 <strong>${item.appealNote}</strong></td>
+                        <td>
+                            <button class="btn-sm btn-approve" onclick="approveAppeal(${idx})">✅ Chấm & Thưởng</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+        updatePendingBadges();
+    }
+
+    function adminResetStudentPass(index) {
+        let newP = prompt(`Nhập mật khẩu mới cho Sinh viên ${studentList[index].name}:`, "123");
+        if (newP) {
+            studentList[index].pass = newP.trim();
+            renderAdminTables();
+            alert("✅ Đã đổi mật khẩu cho sinh viên!");
+        }
+    }
+
+    function resetStudentScore(index) {
+        if(confirm(`Bạn có muốn đặt lại điểm XP của sinh viên ${studentList[index].name} về 0 không?`)) {
+            studentList[index].totalXP = 0;
+            studentList[index].answeredCount = 0;
+            if(currentStudent && currentStudent.id === studentList[index].id) {
+                totalXP = 0;
+                document.getElementById('xpCount').innerText = 0;
+            }
+            renderAdminTables();
+        }
+    }
+
+    function exportStudentScoresExcel() {
+        const headers = [["Mã Sinh Viên", "Họ và Tên", "Mật Khẩu", "Thời Gian Đăng Nhập", "Số Câu Đã Làm", "Tổng Điểm (XP)"]];
+        studentList.forEach(s => {
+            headers.push([s.id, s.name, s.pass || '123', s.lastLogin, s.answeredCount, s.totalXP]);
+        });
+
+        const worksheet = XLSX.utils.aoa_to_sheet(headers);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "BangDiemSinhVien");
+        XLSX.writeFile(workbook, "Bang_Diem_Hoa_Phan_Tich.xlsx");
+    }
+
+    function openEditModal(index) {
+        document.getElementById('editQIndex').value = index !== null ? index : "-1";
+
+        if (index !== null) {
+            const q = questions[index];
+            document.getElementById('modalTitle').innerText = "✏️ CHI TIẾT CÂU HỎI";
+            document.getElementById('modalQId').value = q.id || "";
+            document.getElementById('modalQChapter').value = q.chapter || "";
+            document.getElementById('modalQType').value = q.type || "Trắc nghiệm";
+            document.getElementById('modalQDiff').value = q.difficulty || "Trung bình";
+            document.getElementById('modalQText').value = q.question || "";
+            document.getElementById('modalQXp').value = q.xp || 10;
+            document.getElementById('optA').value = q.optA || "";
+            document.getElementById('optB').value = q.optB || "";
+            document.getElementById('optC').value = q.optC || "";
+            document.getElementById('optD').value = q.optD || "";
+            
+            document.getElementById('expA').value = q.explainA || "";
+            document.getElementById('expB').value = q.explainB || "";
+            document.getElementById('expC').value = q.explainC || "";
+            document.getElementById('expD').value = q.explainD || "";
+
+            document.getElementById('modalCorrectAnswer').value = q.correctAnswer || "";
+            document.getElementById('modalQSolution').value = q.solution || "";
+            document.getElementById('modalWrongExplain').value = q.wrongExplain || "";
+            document.getElementById('modalTheory').value = q.theory || "";
+            document.getElementById('modalHint').value = q.hint || "";
+        } else {
+            document.getElementById('modalTitle').innerText = "➕ THÊM CÂU HỎI MỚI";
+            document.getElementById('modalQId').value = `C1_${questions.length + 1}`;
+            document.getElementById('modalQChapter').value = curriculumList.length > 0 ? curriculumList[0].code : "C1";
+            document.getElementById('modalQType').value = "Trắc nghiệm";
+            document.getElementById('modalQDiff').value = "Dễ";
+            document.getElementById('modalQText').value = "";
+            document.getElementById('modalQXp').value = 10;
+            
+            document.getElementById('optA').value = ""; document.getElementById('optB').value = "";
+            document.getElementById('optC').value = ""; document.getElementById('optD').value = "";
+            
+            document.getElementById('expA').value = ""; document.getElementById('expB').value = "";
+            document.getElementById('expC').value = ""; document.getElementById('expD').value = "";
+
+            document.getElementById('modalCorrectAnswer').value = "A";
+            document.getElementById('modalQSolution').value = "";
+            document.getElementById('modalWrongExplain').value = "";
+            document.getElementById('modalTheory').value = "";
+            document.getElementById('modalHint').value = "";
+        }
+        toggleOptionFields();
+        document.getElementById('editModal').classList.add('active');
+    }
+
+    function toggleOptionFields() {
+        const type = document.getElementById('modalQType').value;
+        document.getElementById('mcqFields').style.display = type === 'Trắc nghiệm' ? 'block' : 'none';
+    }
+
+    function saveQuestion(e) {
+        e.preventDefault();
+        const idx = parseInt(document.getElementById('editQIndex').value);
+        const chapterVal = extractChapterCode(document.getElementById('modalQChapter').value.trim(), document.getElementById('modalQId').value, "C1");
+
+        let qData = {
+            id: document.getElementById('modalQId').value,
+            chapter: chapterVal,
+            type: document.getElementById('modalQType').value,
+            difficulty: document.getElementById('modalQDiff').value,
+            question: document.getElementById('modalQText').value,
+            optA: document.getElementById('optA').value,
+            optB: document.getElementById('optB').value,
+            optC: document.getElementById('optC').value,
+            optD: document.getElementById('optD').value,
+            explainA: document.getElementById('expA').value,
+            explainB: document.getElementById('expB').value,
+            explainC: document.getElementById('expC').value,
+            explainD: document.getElementById('expD').value,
+            correctAnswer: document.getElementById('modalCorrectAnswer').value,
+            xp: parseInt(document.getElementById('modalQXp').value),
+            solution: document.getElementById('modalQSolution').value,
+            wrongExplain: document.getElementById('modalWrongExplain').value,
+            theory: document.getElementById('modalTheory').value,
+            hint: document.getElementById('modalHint').value
+        };
+
+        if (idx >= 0) {
+            questions[idx] = qData;
+            alert("✅ Cập nhật câu hỏi thành công!");
+        } else {
+            questions.push(qData);
+            alert("✅ Đã thêm câu hỏi mới!");
+        }
+
+        syncCurriculumFromQuestions();
+        updateChapterDropdowns();
+        closeModal('editModal');
+        renderAdminTables();
+    }
+
+    function promptDelete(index) {
+        deleteTargetIndex = index;
+        document.getElementById('deleteConfirmModal').classList.add('active');
+    }
+
+    function confirmDelete() {
+        if (deleteTargetIndex !== null) {
+            questions.splice(deleteTargetIndex, 1);
+            deleteTargetIndex = null;
+            syncCurriculumFromQuestions();
+            updateChapterDropdowns();
+            closeModal('deleteConfirmModal');
+            renderAdminTables();
+            alert("🗑️ Đã xóa câu hỏi khỏi ngân hàng!");
+        }
+    }
+
+    function closeModal(modalId) {
+        document.getElementById(modalId).classList.remove('active');
+    }
+
+    // --- CẬP NHẬT HÀM XUẤT EXCEL MẪU ---
+    function downloadSampleExcel() {
+        const sampleHeaders = [
+            [
+                "Mã Cấu/Mã Bài", "Chương / Chủ đề", "Loại Câu Hỏi", "Mức Độ", "Nội Dung Câu Hỏi",
+                "Đáp Án A", "Giải thích NẾU chọn A (Sai)", 
+                "Đáp Án B", "Giải thích NẾU chọn B (Sai)", 
+                "Đáp Án C", "Giải thích NẾU chọn C (Sai)", 
+                "Đáp Án D", "Giải thích NẾU chọn D (Sai)", 
+                "Đáp Án Đúng", "Điểm (XP)",
+                "Giải Thích Đáp Án Đúng / Lời Giải Chi Tiết", "Giải Thích Chung Khi Chọn Sai",
+                "Nhắc Lại Lý Thuyết Trọng Tâm", "Gợi Ý (Hint)"
+            ]
+        ];
+
+        questions.forEach(q => {
+            sampleHeaders.push([
+                q.id || "", q.chapter || "", q.type || "", q.difficulty || "", q.question || "",
+                q.optA || "", q.explainA || "", 
+                q.optB || "", q.explainB || "", 
+                q.optC || "", q.explainC || "", 
+                q.optD || "", q.explainD || "", 
+                q.correctAnswer || "", q.xp || 10,
+                q.solution || "", q.wrongExplain || "", q.theory || "", q.hint || ""
+            ]);
+        });
+
+        const worksheet = XLSX.utils.aoa_to_sheet(sampleHeaders);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "NganHangCauHoi");
+        XLSX.writeFile(workbook, "Mau_Ngan_Hang_Cau_Hoi_Hoa_Phan_Tich.xlsx");
+    }
+
+    function approveAppeal(index) {
+        const item = pendingAppeals[index];
+        
+        let bonusStr = prompt(`Xác nhận duyệt bài cho ${item.studentName}.\nSố điểm cơ bản của câu là: ${item.maxXP} XP.\nNhập điểm THƯỞNG THÊM cho tinh thần phản hồi (VD: 10, 20):`, "10");
+        
+        if (bonusStr === null) return; 
+        
+        let bonusXP = parseInt(bonusStr) || 0;
+        let totalAwarded = item.maxXP + bonusXP;
+
+        let st = studentList.find(s => s.id === item.studentId);
+        if (st) st.totalXP += totalAwarded;
+
+        if (currentStudent && item.studentId === currentStudent.id) {
+            totalXP += totalAwarded;
+            document.getElementById('xpCount').innerText = totalXP;
+            
+            document.getElementById('lblStudentInfo').innerHTML = `${currentStudent.name} <span class="level-badge">${getLevel(totalXP)}</span> <span class="streak-icon">${currentStudent.streak > 1 ? '🔥' + currentStudent.streak : ''}</span>`;
+        }
+
+        alert(`✅ Đã duyệt bài!\nSinh viên được cộng: ${item.maxXP} XP (câu hỏi) + ${bonusXP} XP (thưởng đóng góp) = ${totalAwarded} XP.`);
+
+        pendingAppeals.splice(index, 1);
+        renderAdminTables();
+    }
+
+    function showLeaderboard() {
+        const content = document.getElementById('leaderboardContent');
+        
+        let sorted = [...studentList].sort((a, b) => b.totalXP - a.totalXP);
+        
+        let html = '';
+        sorted.forEach((s, index) => {
+            let medal = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : `${index + 1}.`;
+            html += `
+                <div class="leaderboard-row">
+                    <div>
+                        <span style="font-size: 16px; margin-right: 8px;">${medal}</span>
+                        <span style="font-weight: 600; font-size: 13px;">${s.name}</span>
+                        <span style="font-size: 11px; color: #64748b; margin-left: 5px;">(${getLevel(s.totalXP)})</span>
+                    </div>
+                    <div style="font-weight: bold; color: #0f766e;">${s.totalXP} XP</div>
+                </div>
+            `;
+        });
+        
+        content.innerHTML = html;
+        document.getElementById('leaderboardModal').classList.add('active');
+    }
+
+    function updatePendingBadges() {
+        document.getElementById('totalCurriculumBadge').innerText = curriculumList.length;
+        document.getElementById('totalQBadge').innerText = questions.length;
+        document.getElementById('pendingBadge').innerText = pendingAppeals.length;
+        document.getElementById('tab2StudentCount').innerText = studentList.length;
+        document.getElementById('tab3PendingCount').innerText = pendingAppeals.length;
+    }
+
+    function toggleImportBox() {
+        document.getElementById('importBox').classList.toggle('active');
+    }
+
+    updatePendingBadges();
+</script>
+</body>
+</html>
